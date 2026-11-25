@@ -58,32 +58,35 @@ def print_week(tracker, today):
 def main(argv=None):
     args = build_parser().parse_args(argv)
     today = args.date or date.today()
-    tracker = HabitTracker(args.file)
 
     try:
+        tracker = HabitTracker(args.file)
         if args.command == "add":
             tracker.add(args.name)
-            print(f"Added habit {args.name!r}.")
+            message = f"Added habit {args.name!r}."
         elif args.command == "remove":
             tracker.remove(args.name)
-            print(f"Removed habit {args.name!r}.")
+            message = f"Removed habit {args.name!r}."
         elif args.command == "check":
             tracker.check(args.name, today)
-            print(f"Checked {args.name!r} for {today}.")
+            message = f"Checked {args.name!r} for {today}."
         elif args.command == "uncheck":
             tracker.uncheck(args.name, today)
-            print(f"Unchecked {args.name!r} for {today}.")
+            message = f"Unchecked {args.name!r} for {today}."
         elif args.command == "list":
             print_list(tracker, today)
             return 0
         elif args.command == "week":
             print_week(tracker, today)
             return 0
+        tracker.save()
     except HabitError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
-
-    tracker.save()
+    except OSError as e:
+        print(f"Error: cannot write {args.file}: {e.strerror or e}", file=sys.stderr)
+        return 1
+    print(message)
     return 0
 
 

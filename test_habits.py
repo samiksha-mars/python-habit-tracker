@@ -72,6 +72,12 @@ class TrackerTest(unittest.TestCase):
         with self.assertRaises(HabitError):
             self.tracker.check("Nope", TODAY)
 
+    def test_invalid_data_file_raises_habit_error(self):
+        for content in ("{bad json", "[]", '{"Read": ["2026-13-01"]}', '{"Read": 5}'):
+            self.path.write_text(content)
+            with self.assertRaises(HabitError, msg=content):
+                HabitTracker(self.path)
+
     def test_week_view(self):
         self.tracker.add("Run")
         self.tracker.check("Run", d(18))
@@ -106,6 +112,20 @@ class CliTest(unittest.TestCase):
         code, output = self.run_cli("check", "Missing")
         self.assertEqual(code, 1)
         self.assertIn("no habit named", output)
+
+    def test_corrupt_file_is_reported_and_left_untouched(self):
+        self.path.write_text("{bad json")
+        code, output = self.run_cli("add", "Read")
+        self.assertEqual(code, 1)
+        self.assertIn("not a valid habits file", output)
+        self.assertEqual(self.path.read_text(), "{bad json")
+
+    def test_unwritable_file_is_reported(self):
+        self.path = Path(self.tmp.name) / "missing-dir" / "habits.json"
+        code, output = self.run_cli("add", "Read")
+        self.assertEqual(code, 1)
+        self.assertIn("cannot write", output)
+        self.assertNotIn("Added", output)
 
 
 if __name__ == "__main__":

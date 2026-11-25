@@ -35,11 +35,18 @@ class HabitTracker:
 
     def __init__(self, path):
         self.path = Path(path)
-        if self.path.exists():
-            raw = json.loads(self.path.read_text(encoding="utf-8"))
-            self.habits = {name: {date.fromisoformat(d) for d in days} for name, days in raw.items()}
-        else:
+        if not self.path.exists():
             self.habits = {}
+            return
+        try:
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                raise ValueError("expected a JSON object")
+            self.habits = {name: {date.fromisoformat(d) for d in days} for name, days in raw.items()}
+        except OSError as e:
+            raise HabitError(f"cannot read {self.path}: {e.strerror or e}") from None
+        except (ValueError, TypeError) as e:
+            raise HabitError(f"{self.path} is not a valid habits file: {e}") from None
 
     def save(self):
         data = {name: sorted(d.isoformat() for d in days) for name, days in self.habits.items()}
